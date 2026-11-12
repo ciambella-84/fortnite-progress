@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fortnite download</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1c1450;
+    --fill: #6ff2ff;
+    --track: #2e2575;
+    --text: #f3f0ff;
+    --muted: #a9a0dd;
+    --warn: #ffb86b;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Bricolage Grotesque", system-ui, sans-serif;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  }
+  main { max-width: 560px; width: 100%; margin: 0 auto; }
+  h1 { font-size: 1.1rem; font-weight: 500; color: var(--muted); margin: 0 0 8px; }
+  .pct {
+    font-size: clamp(6rem, 32vw, 11rem);
+    font-weight: 800; line-height: .9; letter-spacing: -.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .pct small { font-size: .35em; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .bar { height: 18px; background: var(--track); border-radius: 9px; margin: 28px 0 20px; overflow: hidden; }
+  .bar div { height: 100%; width: 0; background: var(--fill); border-radius: 9px; transition: width .8s ease; }
+  .info { display: flex; gap: 32px; font-size: 1.2rem; font-weight: 500; }
+  .info span { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 2px; }
+  #stato { margin-top: 28px; font-size: .95rem; color: var(--muted); }
+  #stato.warn { color: var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fortnite sul PC di Nicco</h1>
+  <div class="pct"><span id="pct">--</span><small>%</small></div>
+  <div class="bar"><div id="fill"></div></div>
+  <div class="info">
+    <div><span>Velocità</span><b id="speed">--</b></div>
+    <div><span>Tempo rimasto</span><b id="eta">--</b></div>
+  </div>
+  <p id="stato">Carico i dati…</p>
+</main>
+
+<script>
+  // Cambia questo con il tuo utente e il nome del repo
+  const REPO = "ciambella-84/fortnite-progress";
+  const URL = `https://api.github.com/repos/${REPO}/contents/status.json`;
+
+  const $ = id => document.getElementById(id);
+
+  function fmtEta(min) {
+    if (min == null) return "--";
+    if (min < 60) return min + " min";
+    return Math.floor(min / 60) + " h " + (min % 60) + " min";
+  }
+
+  async function aggiorna() {
+    try {
+      const r = await fetch(URL, { headers: { Accept: "application/vnd.github.raw+json" }, cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      const d = await r.json();
+
+      $("pct").textContent = Math.floor(d.percent);
+      $("fill").style.width = d.percent + "%";
+      $("speed").textContent = d.speed_mbs + " MB/s";
+      $("eta").textContent = d.done ? "finito!" : fmtEta(d.eta_min);
+
+      const sec = Math.round(Date.now() / 1000 - d.updated);
+      const stato = $("stato");
+      if (d.done) {
+        stato.textContent = "Download completato. Puoi giocare!";
+        stato.className = "";
+      } else if (sec > 300) {
+        stato.textContent = "Nessun aggiornamento da " + Math.round(sec / 60) + " minuti: il PC o lo script potrebbero essere fermi.";
+        stato.className = "warn";
+      } else {
+        stato.textContent = "Aggiornato " + (sec < 60 ? sec + " secondi" : Math.round(sec / 60) + " min") + " fa";
+        stato.className = "";
+      }
+    } catch (e) {
+      $("stato").textContent = "Non riesco a leggere i dati (" + e.message + "). Il repo deve essere pubblico e lo script deve aver girato almeno una volta.";
+      $("stato").className = "warn";
+    }
+  }
+
+  aggiorna();
+  setInterval(aggiorna, 90000); // ogni 90 s, per restare sotto il limite di GitHub
+</script>
+</body>
+</html>
